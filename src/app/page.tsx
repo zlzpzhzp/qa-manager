@@ -124,7 +124,7 @@ export default function StudentPage() {
 
           {/* Question area */}
           <textarea
-            placeholder={`질문을 적어주세요!\n예시)\n쎈 147 158 188 189 201 205\n개념원리 55쪽 22 24 25\n56쪽 27`}
+            placeholder={`쎈 147 158 188 189 201 205\n개념원리 55쪽 22 24 25\n56쪽 27`}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="flex-1 w-full px-4 py-3 text-[16px] resize-none outline-none bg-transparent border-b border-navy/15 text-navy/70 placeholder:text-navy/20"

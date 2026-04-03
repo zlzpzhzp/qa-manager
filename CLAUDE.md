@@ -1,4 +1,5 @@
 @AGENTS.md
+@/root/shared/bulletin.md
 
 # 기억보존 프로토콜 (반드시 따를 것)
 
@@ -49,3 +50,28 @@
 - 간결하고 정확하게
 - 잡담 없이 결과 중심
 - 한국어로 응답
+
+## 자가 복구 가이드
+
+**문제 해결 순서**: 1) 에러 메시지 읽기 2) 아래 가이드 확인 3) 직접 해결 시도 4) 해결 안 되면 텔레그램으로 초능력자님께 보고 (원인 + 옵션 제시)
+
+### Vercel 배포 실패
+- `npx next build`로 로컬에서 먼저 빌드 확인
+- `public/` 디렉토리에 대용량 파일이 없는지 확인 (Vercel 제한: 단일 파일 50MB)
+- 빌드 로그의 에러 메시지를 정확히 읽고 해당 파일 수정
+
+### Supabase 에러
+- psql로 직접 접속해서 테이블/데이터 확인:
+  ```bash
+  PGPASSWORD="QvsrM2wmgQjUUL2Q" psql -h db.pasycnvfdotcdzzysqbz.supabase.co -p 5432 -U postgres -d postgres
+  ```
+- RLS 정책 문제인지, 스키마 문제인지, 데이터 문제인지 구분
+- API 에러 시 Supabase 대시보드 로그도 확인
+
+### 서버에서 prod 빌드 서빙
+- dev 모드(`next dev`)는 절대 프로덕션에서 사용 금지
+- prod 빌드 서빙 방법:
+  ```bash
+  fuser -k 포트/tcp && npx next build && npx next start -p 포트 &
+  ```
+- 포트 충돌 시 `fuser -k`로 먼저 정리 후 재시작
