@@ -36,8 +36,6 @@ function formatDate(iso: string) {
 }
 
 export default function TeacherDashboard() {
-  const [authed, setAuthed] = useState(true);
-
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -59,7 +57,17 @@ export default function TeacherDashboard() {
   const [verification, setVerification] = useState('');
   const [corrections, setCorrections] = useState<string[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
+  const [classification, setClassification] = useState<{
+    common: { textbook: string; page?: number; number: number; label?: string; students: string[] }[];
+    individual: Record<string, { textbook: string; page?: number; number: number; label?: string; students: string[] }[]>;
+  } | null>(null);
+  const [showClassification, setShowClassification] = useState(false);
+  const [questions, setQuestions] = useState<{ textbook: string; page?: number; number: number; label?: string; students: string[] }[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatProcessing, setChatProcessing] = useState(false);
+  const [chatLog, setChatLog] = useState<{ role: 'user' | 'system'; text: string }[]>([]);
 
+  const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const fetchSubmissions = useCallback(async () => {
@@ -75,8 +83,6 @@ export default function TeacherDashboard() {
     if (res.ok) {
       const { data } = await res.json();
       setSubmissions(data || []);
-    } else if (res.status === 401) {
-      setAuthed(false);
     }
     setLoading(false);
   }, [startDate, endDate, grade, section, nameFilter]);
@@ -98,6 +104,10 @@ export default function TeacherDashboard() {
       setAnalysis(data.analysis);
       setVerification(data.verification);
       setCorrections(data.corrections || []);
+      setClassification(data.classification || null);
+      setQuestions(data.questions || []);
+      setShowClassification(false);
+      setChatLog([]);
     }
     setAnalyzing(false);
   };
@@ -111,10 +121,57 @@ export default function TeacherDashboard() {
     setCorrections([]);
   };
 
+  const handleChat = async () => {
+    const msg = chatInput.trim();
+    if (!msg) return;
+    setChatInput('');
+    setChatLog((prev) => [...prev, { role: 'user', text: msg }]);
+    setChatProcessing(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: msg,
+          questions,
+          submissions,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.analysis) {
+          setAnalysis(data.analysis);
+          setVerification(data.verification || '');
+          setCorrections(data.corrections || []);
+          setClassification(data.classification || null);
+          setQuestions(data.questions || []);
+        }
+        setChatLog((prev) => [...prev, { role: 'system', text: data.response || '처리 완료' }]);
+      } else {
+        const err = await res.json();
+        setChatLog((prev) => [...prev, { role: 'system', text: err.error || '오류 발생' }]);
+      }
+    } catch {
+      setChatLog((prev) => [...prev, { role: 'system', text: '처리 중 오류가 발생했습니다.' }]);
+    }
+    setChatProcessing(false);
+  };
+
+  const handleCopy = async () => {
+    const text = analysis + '\n\n' + verification;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handlePrint = () => {
     if (!printRef.current) return;
-    const win = window.open('', '_blank');
-    if (!win) return;
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;width:0;height:0;';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument!;
 
     // Build original submissions text grouped by class
     const originalLines: string[] = [];
@@ -135,7 +192,42 @@ export default function TeacherDashboard() {
       ? `<div style="margin-bottom:8px;padding:6px;background:#fff8e1;border:1px solid #ffe082;border-radius:4px;font-size:11px;"><b>자동 교정</b><br/>${corrections.join('<br/>')}</div>`
       : '';
 
-    win.document.write(`
+    // 분류 모드일 때 분류 결과 HTML 생성
+    let classificationHtml = '';
+    if (showClassification && classification) {
+      const commonItems = classification.common.map((q) => {
+        const label = q.label ? q.label : q.page ? `${q.page}쪽 ${q.number}번` : `${q.number}번`;
+        return `<div style="padding:2px 0;break-inside:avoid"><b>${q.textbook}</b> ${label} → ${q.students.join(', ')}</div>`;
+      }).join('');
+
+      const individualItems = Object.entries(classification.individual)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, questions]) => {
+          const qs = questions.map((q) => {
+            const label = q.label ? q.label : q.page ? `${q.page}쪽 ${q.number}번` : `${q.number}번`;
+            return `${q.textbook} ${label}`;
+          }).join(', ');
+          return `<div style="padding:3px 0;break-inside:avoid"><b>${name}</b>: ${qs}</div>`;
+        }).join('');
+
+      classificationHtml = `
+        <div style="columns:2;column-gap:24px;column-rule:1px solid #ddd">
+          <div style="break-inside:avoid;margin-bottom:12px">
+            <h3 style="font-size:13px;font-weight:700;margin-bottom:6px">공통 질문 (2명 이상) — ${classification.common.length}개</h3>
+            ${commonItems || '<div>없음</div>'}
+          </div>
+          <div style="break-inside:avoid">
+            <h3 style="font-size:13px;font-weight:700;margin-bottom:6px">개별 질문 (혼자만) — ${Object.keys(classification.individual).length}명</h3>
+            ${individualItems || '<div>없음</div>'}
+          </div>
+        </div>`;
+    }
+
+    const frontContent = showClassification && classification
+      ? classificationHtml
+      : `<pre>${analysis}</pre>`;
+
+    doc.write(`
       <html><head><title>질문 정리 인쇄</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -147,16 +239,16 @@ export default function TeacherDashboard() {
         .page { width: 100%; min-height: 100vh; padding: 16px; page-break-after: always; }
         .page:last-child { page-break-after: auto; }
         h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; border-bottom: 2px solid #333; padding-bottom: 6px; }
-        pre { white-space: pre-wrap; font-family: 'Pretendard Variable', Pretendard, sans-serif; font-size: 11px; line-height: 1.7; }
+        pre { white-space: pre-wrap; font-family: 'Pretendard Variable', Pretendard, sans-serif; font-size: 11px; line-height: 1.7; columns: 2; column-gap: 24px; column-rule: 1px solid #ddd; }
         .verification { margin-top: 10px; font-weight: 700; font-size: 12px; }
         .page-label { font-size: 9px; color: #bbb; text-align: right; margin-bottom: 4px; }
       </style></head>
       <body>
-        <!-- 앞면: 질문 정리만 -->
+        <!-- 앞면 -->
         <div class="page">
           <div class="page-label">앞면</div>
-          <h2>질문 정리</h2>
-          <pre>${analysis}</pre>
+          <h2>${showClassification ? '개별질문 분류' : '질문 정리'}</h2>
+          ${frontContent}
         </div>
         <!-- 뒷면: 원본 질문 + 교정 로그 + 검증 -->
         <div class="page">
@@ -168,8 +260,9 @@ export default function TeacherDashboard() {
         </div>
       </body></html>
     `);
-    win.document.close();
-    win.print();
+    doc.close();
+    iframe.contentWindow!.onafterprint = () => iframe.remove();
+    setTimeout(() => { iframe.contentWindow!.print(); }, 500);
   };
 
   const setToday = () => { setStartDate(todayStr()); setEndDate(todayStr()); };
@@ -265,32 +358,52 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Stats + Actions row */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-6 bg-white rounded-xl px-5 py-3 shadow-sm border border-border">
+        <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-4">
+          <div className="flex items-center gap-4 bg-white rounded-xl px-4 py-2.5 shadow-sm border border-border">
             <div className="text-center">
-              <div className="text-2xl font-bold text-navy">{submissions.length}</div>
+              <div className="text-xl font-bold text-navy">{submissions.length}</div>
               <div className="text-xs text-silver">제출</div>
             </div>
-            <div className="w-px h-8 bg-border"></div>
+            <div className="w-px h-7 bg-border"></div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-navy">{uniqueStudents}</div>
+              <div className="text-xl font-bold text-navy">{uniqueStudents}</div>
               <div className="text-xs text-silver">학생</div>
             </div>
           </div>
           <button
             onClick={handleAnalyze}
             disabled={analyzing || submissions.length === 0}
-            className="bg-navy text-white px-6 py-2.5 rounded-xl font-semibold disabled:opacity-40 hover:bg-navy-light transition shadow-sm"
+            className="bg-navy text-white px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-navy-light transition shadow-sm"
           >
             {analyzing ? '분석 중...' : '질문 종합'}
           </button>
           {analysis && (
-            <button
-              onClick={handlePrint}
-              className="bg-navy-dark text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-navy transition shadow-sm"
-            >
-              인쇄
-            </button>
+            <>
+              <button
+                onClick={handleCopy}
+                className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition shadow-sm"
+              >
+                {copied ? '복사됨 ✓' : '복사'}
+              </button>
+              <button
+                onClick={handlePrint}
+                className="bg-navy-dark text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-navy transition shadow-sm"
+              >
+                인쇄
+              </button>
+              {classification && (
+                <button
+                  onClick={() => setShowClassification(!showClassification)}
+                  className={`px-3 py-2 rounded-xl text-sm font-semibold transition shadow-sm ${
+                    showClassification
+                      ? 'bg-amber-500 text-white hover:bg-amber-600'
+                      : 'bg-white text-navy border border-navy hover:bg-cream'
+                  }`}
+                >
+                  개별질문 분류
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -305,8 +418,115 @@ export default function TeacherDashboard() {
                 ))}
               </div>
             )}
-            <pre className="text-sm whitespace-pre-wrap leading-relaxed text-navy">{analysis}</pre>
+
+            {showClassification && classification ? (
+              /* 개별질문 분류 뷰 (같은 영역에서 전환) */
+              <div className="md:columns-2 md:gap-8" style={{ columnRule: '1px solid #e5e7eb' }}>
+                <div className="mb-4 break-inside-avoid">
+                  <h3 className="text-base font-bold text-navy mb-3 flex items-center gap-2">
+                    <span className="bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                      {classification.common.length}개
+                    </span>
+                    공통 질문 (2명 이상)
+                  </h3>
+                  {classification.common.length === 0 ? (
+                    <p className="text-sm text-silver">공통 질문이 없습니다.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {classification.common.map((q, i) => {
+                        const qLabel = q.label
+                          ? q.label
+                          : q.page
+                            ? `${q.page}쪽 ${q.number}번`
+                            : `${q.number}번`;
+                        return (
+                          <div key={i} className="flex items-start gap-2 text-sm py-1 break-inside-avoid">
+                            <span className="text-xs font-medium text-navy-light bg-cream px-2 py-0.5 rounded shrink-0">
+                              {q.textbook}
+                            </span>
+                            <span className="font-medium text-navy shrink-0">{qLabel}</span>
+                            <span className="text-silver mx-1">&rarr;</span>
+                            <span className="text-navy/70">{q.students.join(', ')}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="break-inside-avoid">
+                  <h3 className="text-base font-bold text-navy mb-3 flex items-center gap-2">
+                    <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                      {Object.keys(classification.individual).length}명
+                    </span>
+                    개별 질문 (혼자만)
+                  </h3>
+                  {Object.keys(classification.individual).length === 0 ? (
+                    <p className="text-sm text-silver">개별 질문이 없습니다.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {Object.entries(classification.individual)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([name, questions]) => (
+                          <div key={name} className="border border-border/50 rounded-lg p-2.5 break-inside-avoid">
+                            <div className="font-semibold text-navy text-sm mb-1">{name}</div>
+                            <div className="flex flex-wrap gap-1">
+                              {questions.map((q, i) => {
+                                const qLabel = q.label
+                                  ? q.label
+                                  : q.page
+                                    ? `${q.page}쪽 ${q.number}번`
+                                    : `${q.number}번`;
+                                return (
+                                  <span key={i} className="text-xs bg-cream text-navy px-2 py-0.5 rounded border border-border/30">
+                                    {q.textbook} {qLabel}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* 기본 질문 종합 뷰 */
+              <pre className="text-sm whitespace-pre-wrap leading-relaxed text-navy md:columns-2 md:gap-8" style={{ columnRule: '1px solid #e5e7eb' }}>{analysis}</pre>
+            )}
+
             <div className="mt-4 pt-3 border-t border-border text-sm font-semibold text-silver">{verification}</div>
+
+            {/* AI Chat */}
+            <div className="mt-4 pt-4 border-t border-border">
+              {chatLog.length > 0 && (
+                <div className="mb-3 space-y-2 max-h-40 overflow-y-auto">
+                  {chatLog.map((msg, i) => (
+                    <div key={i} className={`text-sm ${msg.role === 'user' ? 'text-navy font-medium' : 'text-silver'}`}>
+                      <span className="text-xs mr-1.5">{msg.role === 'user' ? '▶' : '◀'}</span>
+                      {msg.text}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !chatProcessing && handleChat()}
+                  placeholder="추가 요청 (예: 민수 제외, RPM만, 지난시간과 병합)"
+                  className="flex-1 border border-border rounded-lg px-3 py-2 text-sm text-navy bg-cream focus:bg-white focus:border-navy outline-none transition placeholder:text-silver/60"
+                  disabled={chatProcessing}
+                />
+                <button
+                  onClick={handleChat}
+                  disabled={chatProcessing || !chatInput.trim()}
+                  className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition disabled:opacity-40 shrink-0"
+                >
+                  {chatProcessing ? '처리중...' : '전송'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -340,23 +560,23 @@ export default function TeacherDashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b-2 border-border text-left text-xs text-silver uppercase tracking-wider">
-                      <th className="py-3 px-3 w-24 whitespace-nowrap">반</th>
-                      <th className="py-3 px-3 w-28 whitespace-nowrap">이름</th>
-                      <th className="py-3 px-3">제출 내용</th>
-                      <th className="py-3 px-3 w-20 whitespace-nowrap">날짜</th>
+                      <th className="py-2 px-2 w-14 whitespace-nowrap">반</th>
+                      <th className="py-2 px-2 w-16 whitespace-nowrap">이름</th>
+                      <th className="py-2 px-2">제출 내용</th>
+                      <th className="py-2 px-2 w-14 whitespace-nowrap hidden md:table-cell">날짜</th>
                     </tr>
                   </thead>
                   <tbody>
                     {submissions.map((s) => (
                       <tr key={s.id} className="border-b border-border/50 hover:bg-cream transition">
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getClassBadge(s.class_name)}`}>
+                        <td className="py-2 px-2 whitespace-nowrap">
+                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getClassBadge(s.class_name)}`}>
                             {s.class_name}
                           </span>
                         </td>
-                        <td className="py-3 px-3 font-medium text-navy whitespace-nowrap">{s.student_name}</td>
-                        <td className="py-3 px-3 whitespace-pre-wrap text-navy/70">{s.content}</td>
-                        <td className="py-3 px-3 text-xs text-silver whitespace-nowrap">
+                        <td className="py-2 px-2 text-sm font-medium text-navy whitespace-nowrap">{s.student_name}</td>
+                        <td className="py-2 px-2 text-sm whitespace-pre-wrap text-navy/70">{s.content}</td>
+                        <td className="py-2 px-2 text-xs text-silver whitespace-nowrap hidden md:table-cell">
                           {formatDate(s.created_at)}
                         </td>
                       </tr>

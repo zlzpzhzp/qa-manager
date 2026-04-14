@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CLASS_LIST } from '@/lib/classes';
+import { HIGH_CLASS_LIST } from '@/lib/classes';
 import { createClient } from '@supabase/supabase-js';
 
 function getSupabase() {
@@ -11,7 +11,7 @@ function getSupabase() {
   );
 }
 
-export default function StudentPage() {
+export default function HighStudentPage() {
   const [className, setClassName] = useState('');
   const [studentName, setStudentName] = useState('');
   const [content, setContent] = useState('');
@@ -61,7 +61,6 @@ export default function StudentPage() {
         `}</style>
 
         <div className="w-full max-w-sm">
-          {/* Success modal card */}
           <div className="rounded-3xl p-8 text-center shadow-2xl" style={{ background: '#fff' }}>
             <div className="pop-in w-20 h-20 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: '#e8f5e9' }}>
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
@@ -87,17 +86,14 @@ export default function StudentPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-5 py-10" style={{ background: 'linear-gradient(180deg, #0f1729 0%, #1a2744 100%)' }}>
       <div className="w-full max-w-sm">
-        {/* Card */}
         <div className="rounded-3xl p-7 shadow-2xl" style={{ background: '#fff' }}>
-          {/* Header */}
           <div className="flex items-center gap-3 mb-6">
             <img src="/dm-logo.jpg" alt="DM" className="w-11 h-11 rounded-full shadow" />
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: '#1a2744' }}>질문 제출 <span className="text-xs font-normal" style={{ color: '#99aabb' }}>ver.2</span></h1>
+              <h1 className="text-2xl font-bold" style={{ color: '#1a2744' }}>질문 제출 <span className="text-xs font-normal" style={{ color: '#99aabb' }}>고등부</span></h1>
             </div>
           </div>
 
-          {/* Class & Name */}
           <div className="flex gap-2.5 mb-4">
             <select
               value={className}
@@ -106,7 +102,7 @@ export default function StudentPage() {
               style={{ background: '#f5f6f8', border: 'none', color: className ? '#1a2744' : '#aab5c4' }}
             >
               <option value="">반 선택</option>
-              {CLASS_LIST.map((group) => (
+              {HIGH_CLASS_LIST.map((group) => (
                 <optgroup key={group.group} label={group.group}>
                   {group.classes.map((cls) => (
                     <option key={cls} value={cls}>{cls}</option>
@@ -124,7 +120,6 @@ export default function StudentPage() {
             />
           </div>
 
-          {/* Content */}
           <textarea
             placeholder={`쎈 147 158 188 189 201 205\n개념원리\n55쪽 22 24 25\n56쪽 27`}
             value={content}
@@ -140,7 +135,6 @@ export default function StudentPage() {
             <p className="text-sm mb-3 text-center font-medium" style={{ color: '#e53935' }}>{error}</p>
           )}
 
-          {/* Submit button inside card */}
           <button
             onClick={handleSubmit}
             disabled={submitting}

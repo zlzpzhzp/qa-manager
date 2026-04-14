@@ -1,4 +1,6 @@
 @AGENTS.md
+@/root/shared/textbook-database.md
+@/root/.claude/projects/-root-amnesia-manager/memory/apps/qa.md
 @/root/shared/bulletin.md
 
 # 기억보존 프로토콜 (반드시 따를 것)
@@ -75,3 +77,11 @@
   fuser -k 포트/tcp && npx next build && npx next start -p 포트 &
   ```
 - 포트 충돌 시 `fuser -k`로 먼저 정리 후 재시작
+
+
+# 대화 아카이빙 (필수)
+세션 종료 시 이번 세션의 대화 전문을 memory/conversations/conversation_YYYY-MM-DD.md에 저장하라.
+- 텔레그램 메시지 + 터미널 작업 내용 포함
+- 파일 상단에 키워드 5~10개 추출: `키워드: A, B, C, ...`
+- 같은 날짜 파일이 있으면 아래에 추가
+- 이것은 아카이브용이라 평소에 읽지 않음. 검색 시에만 사용.
