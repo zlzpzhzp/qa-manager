@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabase, verifyAuthToken } from '@/lib/supabase';
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
+export const dynamic = 'force-dynamic';
+
+function checkAuth(req: NextRequest): boolean {
+  const token = req.cookies.get('teacher_auth')?.value;
+  if (!token) return false;
+  return verifyAuthToken(token);
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = getSupabase();
+  if (!checkAuth(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const url = new URL(req.url);
   const startDate = url.searchParams.get('startDate');
   const endDate = url.searchParams.get('endDate');
@@ -51,17 +54,18 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = getSupabase();
+  if (!checkAuth(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const url = new URL(req.url);
   const id = url.searchParams.get('id');
 
-  if (id) {
-    const { error } = await supabase.from('qa_submissions').delete().eq('id', Number(id));
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  } else {
-    const { error } = await supabase.from('qa_submissions').delete().gte('id', 0);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!id) {
+    return NextResponse.json({ error: 'id 파라미터 필수' }, { status: 400 });
   }
+
+  const { error } = await supabase.from('qa_submissions').delete().eq('id', Number(id));
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
 }
