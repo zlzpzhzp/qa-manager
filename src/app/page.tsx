@@ -2,14 +2,6 @@
 
 import { useState } from 'react';
 import { CLASS_LIST } from '@/lib/classes';
-import { createClient } from '@supabase/supabase-js';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
-}
 
 export default function StudentPage() {
   const [className, setClassName] = useState('');
@@ -27,15 +19,20 @@ export default function StudentPage() {
     setSubmitting(true);
     setError('');
 
-    const { error: dbError } = await getSupabase().from('qa_submissions').insert({
-      class_name: className,
-      student_name: studentName.trim(),
-      content: content.trim(),
+    const res = await fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        class_name: className,
+        student_name: studentName.trim(),
+        content: content.trim(),
+      }),
     });
 
     setSubmitting(false);
-    if (dbError) {
-      setError('제출 실패: ' + dbError.message);
+    if (!res.ok) {
+      const { error: msg } = await res.json().catch(() => ({ error: '제출 실패' }));
+      setError(msg || '제출 실패');
     } else {
       setSuccess(true);
       setContent('');

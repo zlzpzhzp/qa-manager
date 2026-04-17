@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { supabase } from '../src/lib/supabase';
+import { describe, it, expect } from 'vitest';
+import { supabase, getSupabaseAdmin } from '../src/lib/supabase';
 
-// 테스트용 데이터
 const testSubmission = {
   class_name: '중1S',
   student_name: '테스트학생',
@@ -10,9 +9,10 @@ const testSubmission = {
 
 let insertedId: number;
 
-describe('submissions CRUD (Supabase 직접)', () => {
-  it('INSERT — 데이터 삽입', async () => {
-    const { data, error } = await supabase
+describe('submissions CRUD', () => {
+  it('INSERT — service_role로 삽입', async () => {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin
       .from('qa_submissions')
       .insert(testSubmission)
       .select()
@@ -25,7 +25,12 @@ describe('submissions CRUD (Supabase 직접)', () => {
     insertedId = data!.id;
   });
 
-  it('SELECT — 삽입된 데이터 조회', async () => {
+  it('INSERT — anon은 RLS로 차단 (H4)', async () => {
+    const { error } = await supabase.from('qa_submissions').insert(testSubmission);
+    expect(error).toBeTruthy();
+  });
+
+  it('SELECT — anon으로 조회 가능', async () => {
     const { data, error } = await supabase
       .from('qa_submissions')
       .select('*')
@@ -57,24 +62,19 @@ describe('submissions CRUD (Supabase 직접)', () => {
       .like('class_name', '중1%');
 
     expect(error).toBeNull();
-    expect(data!.some(d => d.id === insertedId)).toBe(true);
+    expect(data!.some((d) => d.id === insertedId)).toBe(true);
   });
 
-  it('DELETE — 데이터 삭제', async () => {
-    const { error } = await supabase
-      .from('qa_submissions')
-      .delete()
-      .eq('id', insertedId);
-
+  it('DELETE — service_role로 삭제', async () => {
+    const admin = getSupabaseAdmin();
+    const { error } = await admin.from('qa_submissions').delete().eq('id', insertedId);
     expect(error).toBeNull();
 
-    // 삭제 확인
-    const { data } = await supabase
+    const { data } = await admin
       .from('qa_submissions')
       .select('*')
       .eq('id', insertedId)
-      .single();
-
+      .maybeSingle();
     expect(data).toBeNull();
   });
 });
