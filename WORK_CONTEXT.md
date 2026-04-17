@@ -1,5 +1,15 @@
 # 작업 맥락 (QA Manager)
-> 마지막 갱신: 2026-04-15 07:25
+> 마지막 갱신: 2026-04-18 02:48
+
+## 2026-04-18 02:46~ 프롬프트 개선안 적용 진행 중
+- 선생님 지시 (04-17 17:46 KST): "일단 개선할수있는거 개선해 안정성이 중요한거 알지?"
+- 스키마 무변경 4개 패턴만 적용 결정 (section 필드 추가는 추후):
+  1. 숫자만 입력 → 그룹 맥락 교재 상속 (완료)
+  2. 노이즈·장난 명시 필터 + corrections 기록 (완료)
+  3. 학년-학기 표기 통합 일관성 (완료)
+  4. 범위 '~' 임의 배분 금지 (진행 중)
+- buildPrompt() in src/app/api/analyze/route.ts 수정 중
+- 다음: 범위 표기 블록 추가 → 빌드 → /tmp/analyze-all.ts 재실행 → corrections 감소·누락 0 확인 → 배포 → 텔레그램 보고
 
 ## 현재 상태
 - 세션 복구 완료, 텔레그램 연결됨 (chat_id: 8446766313)
@@ -121,6 +131,86 @@
 - 반 구성: 중1~중3, 각 S/H/A/N/K반
 - URL: https://dm-qa.vercel.app (학생용 /, 선생님용 /teacher)
 
+## 2026-04-17 세션 (amnesia 경유 지시)
+- 15:20: amnesia로부터 "앱 코드베이스 전체 리뷰" 지시 수신 (수정 금지, 리뷰만)
+- 산출물: REVIEW_2026-04-17.md (AHP 포맷, critical/high/medium/low)
+- 렌즈: 보안·버그·성능·중복데드·아키텍처스멜·타입안전성
+- 완료 후 텔레그램(8446766313)에 한줄 보고
+- 15:21~15:30 전체 탐색·리뷰 수행
+  - src/ 12개 TS/TSX 파일 전부 읽음
+  - __tests__ 3개 파일, supabase-schema.sql, .env.local 확인
+  - git log로 최근 커밋 흐름 파악 (56aa110=checkAuth 추가, 0c924a2=일일백업)
+- 주요 발견:
+  - C1: 선생님 로그인 UI 완전 부재 → /api/auth 엔드포인트 고아, /teacher는 401로 빈 화면
+  - C2: simpleHash 32bit djb2가 HMAC 대신 토큰 서명 중 — 위조 가능
+  - C3: SUPABASE_SERVICE_ROLE_KEY가 AGENTS.md에 평문 커밋됨 (public repo)
+  - C4: RLS 정책 for delete using (true) + public anon key → REST 직접 삭제 가능
+  - H1: handlePrint iframe의 doc.write에 XSS (학생 content가 그대로 HTML로)
+  - H2: handleDeleteAll이 id 없이 DELETE 호출 → 백엔드 400, UI 조용히 실패
+  - H3: 날짜 필터 TZ suffix 없음 (incident 04-01 재발 위험)
+  - H4: 학생 제출 rate limit·크기 제한 없음
+  - H5: PIN 브루트포스·CSRF 방어 없음
+  - M1~M11, L1~L8 이슈 추가 정리
+- REVIEW_2026-04-17.md 작성 완료 (28개 이슈, C:4 H:5 M:11 L:8)
+
+## 2026-04-17 16:00~16:45 C/H 이슈 수정 및 배포
+- [amnesia 경유·초능력자님 지시] critical/high 수정 요청
+- 원칙: (1) C/H 우선 (2) 각 수정 별도 커밋 (3) 빌드/테스트 필수 (4) 실패 즉시 롤백+텔레그램 (5) M/L은 REVIEW에만 (6) 같은 파일 3회 실패 시 중단
+
+### 완료된 수정 (9개 모두 성공)
+- c975db5 **C3**: AGENTS.md에서 SUPABASE_SERVICE_ROLE_KEY 평문 제거 → `/root/.secrets/credentials.md` 참조로 교체
+- 294d8e0 **C4**: supabase-schema.sql 현행화 — anon_insert/anon_select/service_role_all 3정책으로 문서화 (실제 DB 상태 반영)
+- 8c15360 **H3**: 날짜 필터에 KST TZ suffix(+09:00) 추가 (incident 04-01 재발 방지)
+- a732862 **H2**: 전체삭제 버그 수정 — /api/submissions?all=true 파라미터 추가, service_role admin 클라이언트로 RLS 우회, UI 실패 시 alert
+- e49caee **H1**: 인쇄 iframe XSS 이스케이프 — esc() 헬퍼로 analysis/verification/corrections/textbook/students/name/originalLines 모두 이스케이프
+- a16e321 **C2**: simpleHash 32bit djb2 → WebCrypto HMAC-SHA256 교체, timingSafeEqual 추가, signToken/createAuthToken/verifyAuthToken 모두 async, 호출부 await 적용
+- 3e25bdc **C1**: src/middleware.ts 신설 — /teacher/* 미인증 시 /login 리다이렉트, /api/analyze·/api/chat 401. src/app/login/page.tsx 로그인 UI 추가
+- 5a9352d **H5**: PIN 브루트포스 방어 — qa_auth_attempts 테이블 생성, 15분 창 5회 실패 시 429 차단
+- 86baaac **H4**: /api/submit 서버 라우트 신설 — 학생 페이지가 anon key 직접 INSERT 대신 이 라우트 경유, IP별 60초 창 10건 제한, 입력 길이 검증(class 30/name 50/content 3000자). qa_submissions에 CHECK 제약 추가, anon_insert 정책 제거. 테스트는 admin 클라이언트로 픽스처 생성하도록 재작성
+
+### DB 마이그레이션 (psql 직접 실행)
+- qa_auth_attempts (ip, success, attempted_at) + 인덱스 + service_role_all RLS
+- qa_submit_attempts (ip, attempted_at) + 인덱스 + service_role_all RLS
+- qa_submissions에 class_len/name_len/content_len CHECK 제약 추가
+- qa_submissions의 anon_insert 정책 DROP
+
+### 배포
+- vercel --prod --yes → 첫 시도 성공 (dm-qa.vercel.app)
+- 빌드 16s, 배포 35s, 캐시 생성까지 정상
+- 스모크 테스트 통과:
+  - /login = 200
+  - /teacher → /login 307 리다이렉트 (미들웨어 정상)
+  - /api/submissions = 401 (checkAuth 정상)
+  - /api/submit 빈 body = 400 (입력 검증 정상)
+  - anon key 직접 INSERT = 401, DELETE는 204 반환하지만 실제 행 삭제 안 됨 (RLS silent filter, 173 rows 유지)
+
+### 테스트
+- npx vitest run → 20/20 통과 (이전 18/19에서 submissions.test.ts 재작성으로 2건 추가 통과)
+
+### 텔레그램 보고
+- "🔧 질문 수정 완료 C-fix:4/H-fix:5/실패:0/스킵:0"
+
+## 2026-04-17 16:40~16:55 재미나이 분류 리뷰 + 프롬프트 개선안
+- 선생님 지시: "재미나이한테 반별 날짜별 분류시키고 못 푸는 것들 리뷰, 프롬프트 수정제안 만들어봐"
+- 방법: /tmp/analyze-all.ts 스크립트로 DB 전체 175건 → 37개(반×날짜) 그룹 → Gemini 2.5 Flash 재파싱
+
+### 결과
+- total=175, groups=37, errors=0
+- groups_with_corrections=17, total_corrections=38
+- critical_misses=0 (완전 누락 없음)
+- 단 "쎈 11111111"(윤원준)처럼 명백한 연타 장난은 조용히 버려짐 → corrections에도 기록 안 됨
+
+### 발견된 파싱 문제 패턴 6가지
+1. **숫자만 입력의 교재 상속 실패**: "678" → 비정규 교재 (주변 학생 전부 쎈 쓰는데도)
+2. **노이즈·장난 조용히 버림**: "11111111" 같은 연타가 corrections 없이 사라짐
+3. **학년-학기 표기 통합 비일관**: 쎈2-1은 분리, 쎈3-1은 쎈으로 통합 — 그룹마다 판단 흔들림
+4. **부가 섹션명**: "확인 5의 4번"을 number 필드에 문자열로 저장 → 스키마 오염
+5. **범위 표기 '~' 임의 배분**: "p24~25 6,11,15" → Gemini가 근거 없이 페이지 쪼갬
+6. **학습지 주제명 통합 변동**: "원가 정가", "원가정가 학습지", "계산력 강화하기(원가 정가)"가 각각 다른 교재로 분리
+
+### 산출물
+- PARSING_REVIEW_2026-04-17.md — 패턴별 실례 + 프롬프트 개선안 + buildPrompt() 패치 초안 작성
+
 ## 다음 할 일
-- 텔레그램 메시지 대기 중
-- 선생님 추가 지시 대기
+- 선생님 판단 대기 (프롬프트 패치 적용 여부, section 필드 스키마 변경 여부)
+- 적용 시: buildPrompt()에 4개 블록 삽입 → 재분석 → corrections 감소 확인
