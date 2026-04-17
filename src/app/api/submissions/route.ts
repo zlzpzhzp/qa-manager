@@ -26,10 +26,10 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false });
 
   if (startDate) {
-    query = query.gte('created_at', startDate + 'T00:00:00');
+    query = query.gte('created_at', startDate + 'T00:00:00+09:00');
   }
   if (endDate) {
-    query = query.lte('created_at', endDate + 'T23:59:59');
+    query = query.lte('created_at', endDate + 'T23:59:59+09:00');
   }
   if (grade && grade !== 'all') {
     query = query.like('class_name', `${grade}%`);
