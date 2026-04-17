@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   const correctPin = process.env.TEACHER_PIN || '0999';
 
   if (pin === correctPin) {
-    const token = createAuthToken();
+    const token = await createAuthToken();
     const res = NextResponse.json({ success: true });
     res.cookies.set('teacher_auth', token, {
       httpOnly: true,

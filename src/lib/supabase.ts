@@ -26,36 +26,61 @@ export type Submission = {
   created_at: string;
 };
 
-// --- Auth token (simple hash, no crypto dependency) ---
-const AUTH_SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || 'fallback-secret';
-
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash).toString(36);
+// --- Auth token (WebCrypto HMAC-SHA256) ---
+// secret이 없으면 토큰 생성/검증 시 에러. 런타임에 실패로 드러나게 하여 기본값 의존 사고 차단.
+function getAuthSecret(): string {
+  const s = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!s) throw new Error('SUPABASE_SERVICE_ROLE_KEY 미설정 — 토큰 서명 불가');
+  return s;
 }
 
-export function signToken(payload: string): string {
-  return simpleHash(payload + AUTH_SECRET + payload);
+async function hmacSha256Hex(secret: string, payload: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
+  const bytes = new Uint8Array(sigBuf);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0');
+  return hex;
 }
 
-export function createAuthToken(): string {
+// 타이밍 공격 방지: 길이 먼저, 바이트 XOR 누적 후 비교.
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+export async function signToken(payload: string): Promise<string> {
+  return hmacSha256Hex(getAuthSecret(), payload);
+}
+
+export async function createAuthToken(): Promise<string> {
   const expires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
   const payload = `teacher:${expires}`;
-  const sig = signToken(payload);
+  const sig = await signToken(payload);
   return `${payload}:${sig}`;
 }
 
-export function verifyAuthToken(token: string): boolean {
+export async function verifyAuthToken(token: string): Promise<boolean> {
   const parts = token.split(':');
   if (parts.length !== 3) return false;
   const [role, expiresStr, sig] = parts;
   const payload = `${role}:${expiresStr}`;
-  if (signToken(payload) !== sig) return false;
+  let expected: string;
+  try {
+    expected = await signToken(payload);
+  } catch {
+    return false;
+  }
+  if (!timingSafeEqual(expected, sig)) return false;
   if (Date.now() > Number(expiresStr)) return false;
   return true;
 }

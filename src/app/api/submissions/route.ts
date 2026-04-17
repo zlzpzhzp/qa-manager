@@ -3,14 +3,14 @@ import { supabase, getSupabaseAdmin, verifyAuthToken } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-function checkAuth(req: NextRequest): boolean {
+async function checkAuth(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get('teacher_auth')?.value;
   if (!token) return false;
-  return verifyAuthToken(token);
+  return await verifyAuthToken(token);
 }
 
 export async function GET(req: NextRequest) {
-  if (!checkAuth(req)) {
+  if (!(await checkAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const url = new URL(req.url);
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!checkAuth(req)) {
+  if (!(await checkAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const url = new URL(req.url);
