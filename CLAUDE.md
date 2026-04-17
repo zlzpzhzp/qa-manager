@@ -1,4 +1,5 @@
 @AGENTS.md
+@HANDOFF.md
 @/root/shared/textbook-database.md
 @/root/.claude/projects/-root-amnesia-manager/memory/apps/qa.md
 @/root/shared/bulletin.md

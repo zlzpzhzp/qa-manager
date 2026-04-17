@@ -1,5 +1,5 @@
 # 작업 맥락 (QA Manager)
-> 마지막 갱신: 2026-04-13 20:00
+> 마지막 갱신: 2026-04-15 07:25
 
 ## 현재 상태
 - 세션 복구 완료, 텔레그램 연결됨 (chat_id: 8446766313)
@@ -102,6 +102,9 @@
   - teacher/page.tsx: 미사용 authed state 제거
   - 미사용 import(verifyAuthToken) 제거
   - 빌드+배포 완료
+- 2026-04-15 07:20: /simplify 후 깨진 테스트 수정
+  - 삭제된 함수(normalizeAbbreviations, parseContent, formatAnalysis) 테스트 → 새 공유 유틸(classifyQuestions, buildAnalysisText, buildVerification) 테스트로 교체
+  - 18개 테스트 통과 (submissions DELETE 1개 실패는 DB 상태 문제, 기존 이슈)
 
 ## 이전 기록 요약 (2026-04-01~05)
 - 04-01: 프로젝트 생성, 파서 전면 개편, UI 디자인 반복
