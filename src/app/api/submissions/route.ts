@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, verifyAuthToken } from '@/lib/supabase';
+import { supabase, getSupabaseAdmin, verifyAuthToken } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,13 +59,26 @@ export async function DELETE(req: NextRequest) {
   }
   const url = new URL(req.url);
   const id = url.searchParams.get('id');
+  const all = url.searchParams.get('all');
 
-  if (!id) {
-    return NextResponse.json({ error: 'id 파라미터 필수' }, { status: 400 });
+  const admin = getSupabaseAdmin();
+  let query = admin.from('qa_submissions').delete({ count: 'exact' });
+
+  if (id) {
+    query = query.eq('id', Number(id));
+  } else if (all === 'true') {
+    // 현재 필터된 범위 내 전체 삭제 (선생님 "전체 삭제" 버튼용).
+    // 조건 없는 delete는 PostgREST가 거부하므로 id>=0 으로 전체 지정.
+    query = query.gte('id', 0);
+  } else {
+    return NextResponse.json(
+      { error: 'id 또는 all=true 파라미터 필수' },
+      { status: 400 }
+    );
   }
 
-  const { error } = await supabase.from('qa_submissions').delete().eq('id', Number(id));
+  const { error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, deleted: count ?? 0 });
 }

@@ -114,7 +114,11 @@ export default function TeacherDashboard() {
 
   const handleDeleteAll = async () => {
     if (!confirm('정말 전체 삭제하시겠습니까?')) return;
-    await fetch('/api/submissions', { method: 'DELETE' });
+    const res = await fetch('/api/submissions?all=true', { method: 'DELETE' });
+    if (!res.ok) {
+      alert('삭제 실패: ' + res.status);
+      return;
+    }
     fetchSubmissions();
     setAnalysis('');
     setVerification('');
