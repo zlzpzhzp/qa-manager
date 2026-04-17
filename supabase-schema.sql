@@ -25,3 +25,16 @@ create policy "anon_select" on qa_submissions
 -- anon으로는 삭제/수정 불가 — PostgREST가 조용히 0 rows affected 반환
 create policy "service_role_all" on qa_submissions
   for all to service_role using (true) with check (true);
+
+-- H5: PIN 로그인 브루트포스 방어용 실패 기록 테이블.
+-- /api/auth에서 15분 창 실패 5회 이상이면 차단. service_role 전용.
+create table qa_auth_attempts (
+  id bigint generated always as identity primary key,
+  ip text not null,
+  success boolean not null default false,
+  attempted_at timestamptz default now()
+);
+create index qa_auth_attempts_ip_time on qa_auth_attempts(ip, attempted_at desc);
+alter table qa_auth_attempts enable row level security;
+create policy "service_role_all" on qa_auth_attempts
+  for all to service_role using (true) with check (true);
