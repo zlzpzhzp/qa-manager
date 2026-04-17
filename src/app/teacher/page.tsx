@@ -172,6 +172,12 @@ export default function TeacherDashboard() {
 
   const handlePrint = () => {
     if (!printRef.current) return;
+    // 학생 content가 doc.write로 HTML 주입되면 XSS(H1). 모든 동적 문자열은 esc().
+    const esc = (s: string) =>
+      s.replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!)
+      );
+
     const iframe = document.createElement('iframe');
     iframe.style.cssText = 'position:fixed;left:-9999px;width:0;height:0;';
     document.body.appendChild(iframe);
@@ -193,7 +199,7 @@ export default function TeacherDashboard() {
     }
 
     const correctionsHtml = corrections.length > 0
-      ? `<div style="margin-bottom:8px;padding:6px;background:#fff8e1;border:1px solid #ffe082;border-radius:4px;font-size:11px;"><b>자동 교정</b><br/>${corrections.join('<br/>')}</div>`
+      ? `<div style="margin-bottom:8px;padding:6px;background:#fff8e1;border:1px solid #ffe082;border-radius:4px;font-size:11px;"><b>자동 교정</b><br/>${corrections.map(esc).join('<br/>')}</div>`
       : '';
 
     // 분류 모드일 때 분류 결과 HTML 생성
@@ -201,7 +207,7 @@ export default function TeacherDashboard() {
     if (showClassification && classification) {
       const commonItems = classification.common.map((q) => {
         const label = q.label ? q.label : q.page ? `${q.page}쪽 ${q.number}번` : `${q.number}번`;
-        return `<div style="padding:2px 0;break-inside:avoid"><b>${q.textbook}</b> ${label} → ${q.students.join(', ')}</div>`;
+        return `<div style="padding:2px 0;break-inside:avoid"><b>${esc(q.textbook)}</b> ${esc(label)} → ${esc(q.students.join(', '))}</div>`;
       }).join('');
 
       const individualItems = Object.entries(classification.individual)
@@ -211,7 +217,7 @@ export default function TeacherDashboard() {
             const label = q.label ? q.label : q.page ? `${q.page}쪽 ${q.number}번` : `${q.number}번`;
             return `${q.textbook} ${label}`;
           }).join(', ');
-          return `<div style="padding:3px 0;break-inside:avoid"><b>${name}</b>: ${qs}</div>`;
+          return `<div style="padding:3px 0;break-inside:avoid"><b>${esc(name)}</b>: ${esc(qs)}</div>`;
         }).join('');
 
       classificationHtml = `
@@ -229,7 +235,7 @@ export default function TeacherDashboard() {
 
     const frontContent = showClassification && classification
       ? classificationHtml
-      : `<pre>${analysis}</pre>`;
+      : `<pre>${esc(analysis)}</pre>`;
 
     doc.write(`
       <html><head><title>질문 정리 인쇄</title>
@@ -258,9 +264,9 @@ export default function TeacherDashboard() {
         <div class="page">
           <div class="page-label">뒷면</div>
           <h2>원본 질문</h2>
-          <pre>${originalLines.join('\n')}</pre>
+          <pre>${esc(originalLines.join('\n'))}</pre>
           ${correctionsHtml}
-          <div class="verification">${verification}</div>
+          <div class="verification">${esc(verification)}</div>
         </div>
       </body></html>
     `);
