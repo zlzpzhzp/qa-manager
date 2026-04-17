@@ -45,8 +45,7 @@
 
 ### Supabase (공용)
 - URL: https://pasycnvfdotcdzzysqbz.supabase.co
-- Anon Key: sb_publishable_19A41qZ6ykd-T4J7T1KK9g_BJeTnA3I
-- Service Role Key: ***SUPABASE_SERVICE_ROLE_REDACTED_2026-04-23***
+- Anon Key / Service Role Key: `/root/.secrets/credentials.md` 또는 `.env.local` 참조 (문서에 평문 금지)
 - 다른 앱(academy-manager, tuition-manager, dm-teacher-app)과 동일 프로젝트 사용
 - 테이블은 자유롭게 생성 가능 (qa_ 접두사 권장, 충돌 방지)
 - **DDL 실행**: service role key로 Supabase REST API를 통해 직접 SQL 실행 가능:
