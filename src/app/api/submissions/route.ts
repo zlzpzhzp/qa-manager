@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, getSupabaseAdmin } from '@/lib/supabase';
+import { supabase, getSupabaseAdmin, verifyAuthToken } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
+async function checkAuth(req: NextRequest): Promise<boolean> {
+  const token = req.cookies.get('teacher_auth')?.value;
+  if (!token) return false;
+  return await verifyAuthToken(token);
+}
+
 export async function GET(req: NextRequest) {
+  if (!(await checkAuth(req))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const url = new URL(req.url);
   const startDate = url.searchParams.get('startDate');
   const endDate = url.searchParams.get('endDate');
@@ -45,6 +54,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  if (!(await checkAuth(req))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const url = new URL(req.url);
   const id = url.searchParams.get('id');
   const all = url.searchParams.get('all');
