@@ -15,7 +15,8 @@ function clientIp(req: NextRequest): string {
 
 export async function POST(req: NextRequest) {
   const { pin } = await req.json();
-  const correctPin = process.env.TEACHER_PIN || '0999';
+  const submittedPin = (pin ?? '').toString().trim();
+  const correctPin = (process.env.TEACHER_PIN ?? '0999').trim();
   const ip = clientIp(req);
   const admin = getSupabaseAdmin();
   const since = new Date(Date.now() - WINDOW_MS).toISOString();
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const ok = pin === correctPin;
+  const ok = submittedPin === correctPin;
   await admin.from('qa_auth_attempts').insert({ ip, success: ok });
 
   if (ok) {
