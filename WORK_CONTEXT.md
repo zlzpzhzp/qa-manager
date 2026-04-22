@@ -1,5 +1,16 @@
 # 작업 맥락 (QA Manager)
-> 마지막 갱신: 2026-04-18 (continuation)
+> 마지막 갱신: 2026-04-22 12:50 KST
+
+## 2026-04-22 Gemini 3 업그레이드
+- 선생님 지시: "재미나이 cli 깔았는데 api대신 그거쓰는거 어떨까" → "분석정확도 올라가니까"
+- CLI 전환 반대 (Vercel 서버리스는 CLI 못 띄움)
+- API에도 Gemini 3 있음 확인 (gemini-3-pro-preview, gemini-3-flash-preview, 3.1-pro, 3.1-flash-lite 등)
+- 선생님: "분석정확도 최상으로 할수 있어?"
+- 1차 시도: gemini-3.1-pro-preview로 변경 → 로컬 테스트 180초 초과 (Vercel 60초 한계 못맞춤)
+- 2차: gemini-3-flash-preview로 교체 (2.5-flash의 3버전, 속도 유지하며 모델 업그레이드)
+- maxOutputTokens 8192 → 16384 확장
+- thinkingConfig 제거 (flash-preview는 thinking 미지원 또는 기본값 사용)
+- 수정 파일: src/app/api/analyze/route.ts, analyze-all.ts
 
 ## 2026-04-18 프롬프트 개선 + 학생앱 방어 완료
 - 프롬프트 개선 4건 배포 (숫자만입력 상속, 노이즈 명시필터, 학년-학기 통합, 범위~ 금지)

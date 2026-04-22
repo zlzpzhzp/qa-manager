@@ -134,7 +134,7 @@ function parseGeminiResponse(text: string): { questions: Question[]; corrections
 
 async function callGemini(prompt: string): Promise<string | null> {
   if (!GEMINI_API_KEY) return null;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -142,8 +142,7 @@ async function callGemini(prompt: string): Promise<string | null> {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.1,
-        maxOutputTokens: 8192,
-        thinkingConfig: { thinkingBudget: 0 },
+        maxOutputTokens: 16384,
       },
     }),
   });
