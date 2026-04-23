@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { HIGH_CLASS_LIST } from '@/lib/classes';
 
 export default function HighStudentPage() {
@@ -39,49 +40,63 @@ export default function HighStudentPage() {
     }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-5" style={{ background: 'linear-gradient(180deg, #0f1729 0%, #1a2744 100%)' }}>
-        <style>{`
-          @keyframes popIn {
-            0% { transform: scale(0); opacity: 0; }
-            60% { transform: scale(1.1); }
-            100% { transform: scale(1); opacity: 1; }
-          }
-          @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(16px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          .pop-in { animation: popIn 0.5s ease-out forwards; }
-          .fade-up { animation: fadeUp 0.5s ease-out 0.3s forwards; opacity: 0; }
-          .fade-up-2 { animation: fadeUp 0.5s ease-out 0.5s forwards; opacity: 0; }
-        `}</style>
-
-        <div className="w-full max-w-sm">
-          <div className="rounded-3xl p-8 text-center shadow-2xl" style={{ background: '#fff' }}>
-            <div className="pop-in w-20 h-20 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: '#e8f5e9' }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                <path d="M5 13l4 4L19 7" stroke="#2e7d32" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <p className="fade-up text-xl font-bold mb-1" style={{ color: '#1a2744' }}>질문이 전달됐어요!</p>
-            <p className="fade-up-2 text-sm mb-6" style={{ color: '#8899aa' }}>선생님이 곧 확인할게요</p>
-
-            <button
-              onClick={() => setSuccess(false)}
-              className="fade-up-2 w-full py-4 rounded-2xl text-[16px] font-semibold transition hover:opacity-90"
-              style={{ background: '#1a2744', color: '#fff' }}
-            >
-              추가 제출
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center px-5 py-10" style={{ background: 'linear-gradient(180deg, #0f1729 0%, #1a2744 100%)' }}>
+    <AnimatePresence mode="wait" initial={false}>
+      {success ? (
+        <motion.div
+          key="success"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+          className="min-h-screen flex items-center justify-center px-5"
+          style={{ background: 'linear-gradient(180deg, #0f1729 0%, #1a2744 100%)' }}
+        >
+          <style>{`
+            @keyframes popIn {
+              0% { transform: scale(0); opacity: 0; }
+              60% { transform: scale(1.1); }
+              100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes fadeUp {
+              from { opacity: 0; transform: translateY(16px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            .pop-in { animation: popIn 0.5s ease-out forwards; }
+            .fade-up { animation: fadeUp 0.5s ease-out 0.3s forwards; opacity: 0; }
+            .fade-up-2 { animation: fadeUp 0.5s ease-out 0.5s forwards; opacity: 0; }
+          `}</style>
+
+          <div className="w-full max-w-sm">
+            <div className="rounded-3xl p-8 text-center shadow-2xl" style={{ background: '#fff' }}>
+              <div className="pop-in w-20 h-20 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: '#e8f5e9' }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 13l4 4L19 7" stroke="#2e7d32" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="fade-up text-xl font-bold mb-1" style={{ color: '#1a2744' }}>질문이 전달됐어요!</p>
+              <p className="fade-up-2 text-sm mb-6" style={{ color: '#8899aa' }}>선생님이 곧 확인할게요</p>
+
+              <button
+                onClick={() => setSuccess(false)}
+                className="fade-up-2 w-full py-4 rounded-2xl text-[16px] font-semibold transition hover:opacity-90"
+                style={{ background: '#1a2744', color: '#fff' }}
+              >
+                추가 제출
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="form"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+          className="min-h-screen flex items-center justify-center px-5 py-10"
+          style={{ background: 'linear-gradient(180deg, #0f1729 0%, #1a2744 100%)' }}
+        >
       <div className="w-full max-w-sm">
         <div className="rounded-3xl p-7 shadow-2xl" style={{ background: '#fff' }}>
           <div className="flex items-center gap-3 mb-6">
@@ -145,6 +160,8 @@ export default function HighStudentPage() {
           </button>
         </div>
       </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

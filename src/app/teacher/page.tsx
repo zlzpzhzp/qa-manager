@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { Submission } from '@/lib/supabase';
 import { GRADE_LIST, SECTION_LIST } from '@/lib/classes';
 
@@ -560,42 +561,59 @@ export default function TeacherDashboard() {
             </button>
           </div>
 
-          {showList && (
-            loading ? (
-              <p className="text-sm text-silver py-4">불러오는 중...</p>
-            ) : submissions.length === 0 ? (
-              <p className="text-sm text-silver py-4">제출 데이터가 없습니다.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-border text-left text-xs text-silver uppercase tracking-wider">
-                      <th className="py-2 px-2 w-14 whitespace-nowrap">반</th>
-                      <th className="py-2 px-2 w-16 whitespace-nowrap">이름</th>
-                      <th className="py-2 px-2">제출 내용</th>
-                      <th className="py-2 px-2 w-14 whitespace-nowrap hidden md:table-cell">날짜</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {submissions.map((s) => (
-                      <tr key={s.id} className="border-b border-border/50 hover:bg-cream transition">
-                        <td className="py-2 px-2 whitespace-nowrap">
-                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getClassBadge(s.class_name)}`}>
-                            {s.class_name}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-sm font-medium text-navy whitespace-nowrap">{s.student_name}</td>
-                        <td className="py-2 px-2 text-sm whitespace-pre-wrap text-navy/70">{s.content}</td>
-                        <td className="py-2 px-2 text-xs text-silver whitespace-nowrap hidden md:table-cell">
-                          {formatDate(s.created_at)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          )}
+          <AnimatePresence initial={false}>
+            {showList && (
+              <motion.div
+                key="submission-list"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+                style={{ overflow: 'hidden' }}
+              >
+                {loading ? (
+                  <p className="text-sm text-silver py-4">불러오는 중...</p>
+                ) : submissions.length === 0 ? (
+                  <p className="text-sm text-silver py-4">제출 데이터가 없습니다.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b-2 border-border text-left text-xs text-silver uppercase tracking-wider">
+                          <th className="py-2 px-2 w-14 whitespace-nowrap">반</th>
+                          <th className="py-2 px-2 w-16 whitespace-nowrap">이름</th>
+                          <th className="py-2 px-2">제출 내용</th>
+                          <th className="py-2 px-2 w-14 whitespace-nowrap hidden md:table-cell">날짜</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {submissions.map((s, i) => (
+                          <motion.tr
+                            key={s.id}
+                            initial={{ opacity: 0, x: -6 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ type: 'spring', stiffness: 420, damping: 28, delay: Math.min(i * 0.02, 0.3) }}
+                            className="border-b border-border/50 hover:bg-cream transition"
+                          >
+                            <td className="py-2 px-2 whitespace-nowrap">
+                              <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getClassBadge(s.class_name)}`}>
+                                {s.class_name}
+                              </span>
+                            </td>
+                            <td className="py-2 px-2 text-sm font-medium text-navy whitespace-nowrap">{s.student_name}</td>
+                            <td className="py-2 px-2 text-sm whitespace-pre-wrap text-navy/70">{s.content}</td>
+                            <td className="py-2 px-2 text-xs text-silver whitespace-nowrap hidden md:table-cell">
+                              {formatDate(s.created_at)}
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
