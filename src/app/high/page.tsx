@@ -95,6 +95,7 @@ export default function HighStudentPage() {
             <select
               value={className}
               onChange={(e) => setClassName(e.target.value)}
+              aria-label="반 선택"
               className="flex-shrink-0 px-3 py-2.5 text-[16px] rounded-xl outline-none"
               style={{ background: '#f5f6f8', border: 'none', color: className ? '#1a2744' : '#aab5c4' }}
             >
@@ -112,6 +113,7 @@ export default function HighStudentPage() {
               placeholder="이름"
               value={studentName}
               onChange={(e) => setStudentName(e.target.value)}
+              aria-label="이름"
               className="w-24 flex-shrink-0 px-3 py-2.5 text-[16px] rounded-xl outline-none"
               style={{ background: '#f5f6f8', border: 'none', color: '#1a2744' }}
             />
@@ -121,6 +123,7 @@ export default function HighStudentPage() {
             placeholder={`쎈 147 158 188 189 201 205\n개념원리\n55쪽 22 24 25\n56쪽 27`}
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            aria-label="질문 내용"
             rows={6}
             className="w-full px-4 py-3 text-[16px] rounded-xl outline-none resize-none mb-1 leading-relaxed"
             style={{ background: '#f5f6f8', border: '2px solid #3b5998', color: '#1a2744' }}
