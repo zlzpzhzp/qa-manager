@@ -27,10 +27,10 @@ export type Submission = {
 };
 
 // --- Auth token (WebCrypto HMAC-SHA256) ---
-// secret이 없으면 토큰 생성/검증 시 에러. 런타임에 실패로 드러나게 하여 기본값 의존 사고 차단.
+// SESSION_SECRET은 DB 키와 완전히 분리된 독립 시크릿. 키 로테이션 시 인증 영향 없음.
 function getAuthSecret(): string {
-  const s = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!s) throw new Error('SUPABASE_SERVICE_ROLE_KEY 미설정 — 토큰 서명 불가');
+  const s = process.env.SESSION_SECRET;
+  if (!s) throw new Error('SESSION_SECRET 미설정 — 토큰 서명 불가');
   return s;
 }
 
