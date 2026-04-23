@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, getSupabaseAdmin, verifyAuthToken } from '@/lib/supabase';
+import { getSupabaseAdmin, verifyAuthToken } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const section = url.searchParams.get('section');
   const names = url.searchParams.get('names');
 
-  let query = supabase
+  let query = getSupabaseAdmin()
     .from('qa_submissions')
     .select('*')
     .order('created_at', { ascending: false });
