@@ -249,3 +249,12 @@
 ## 다음 할 일
 - 선생님 판단 대기 (프롬프트 패치 적용 여부, section 필드 스키마 변경 여부)
 - 적용 시: buildPrompt()에 4개 블록 삽입 → 재분석 → corrections 감소 확인
+
+---
+
+## 2026-04-23 15:50 KST — amnesia 세션에서 CLAUDE.md 에 dm-ui 포인터 추가
+
+amnesia 세션이 UI 디스커버리 개선 중 (초능력자님 msg 3361 — 각 앱 Claude들이 알아듣게). 질문 CLAUDE.md 에 dm-ui 재사용 규칙 섹션 추가:
+- 질문앱은 dm-ui 실사용 0 (Phase 3 대상)
+- UI 키워드 나오면 `/root/dm-ui/README.md` 카탈로그 + 사용처 맵 먼저 확인
+- dm-ui 수정은 원본에서 + sync.sh (직접 수정 금지)
