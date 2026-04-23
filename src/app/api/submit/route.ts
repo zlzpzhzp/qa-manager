@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { ALL_CLASSES } from '@/lib/classes';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +76,9 @@ export async function POST(req: NextRequest) {
   if (!cn || !sn || !ct) return NextResponse.json({ error: '필드 누락' }, { status: 400 });
   if (cn.length > MAX_CLASS || sn.length > MAX_NAME || ct.length > MAX_CONTENT) {
     return NextResponse.json({ error: '입력이 너무 깁니다.' }, { status: 400 });
+  }
+  if (!ALL_CLASSES.includes(cn)) {
+    return NextResponse.json({ error: '알 수 없는 반입니다. 드롭다운에서 선택해주세요.' }, { status: 400 });
   }
   if (looksLikeNoise(ct)) {
     return NextResponse.json({ error: '질문으로 보이지 않는 입력입니다. 교재명과 문제번호를 확인해주세요.' }, { status: 400 });
