@@ -1,5 +1,11 @@
 # 작업 맥락 (QA Manager)
-> 마지막 갱신: 2026-04-22 12:50 KST
+> 마지막 갱신: 2026-04-24 17:49 KST
+
+## 2026-04-24 17:48 — KST 시간대 전수감사 (amnesia msg 3567)
+- 신규: `src/instrumentation.ts` — `process.env.TZ='Asia/Seoul'`
+- **Vercel region: `iad1` (US Virginia) → `icn1` (Seoul)** — 가장 큰 변경 (커밋 6bfe05d)
+- submissions.test.ts:46 의 `toISOString().split('T')[0]` 는 테스트 코드라 KST 서버에선 현재 동작 무영향 — 남겨둠
+- 규칙: `/root/shared/bulletin.md [rule.timezone]` / amnesia `feedback_kst_only.md` 참조
 
 ## 2026-04-22 Gemini 3 업그레이드
 - 선생님 지시: "재미나이 cli 깔았는데 api대신 그거쓰는거 어떨까" → "분석정확도 올라가니까"
